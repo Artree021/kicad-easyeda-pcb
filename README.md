@@ -19,6 +19,11 @@ English: A reusable agent skill for evidence-based KiCad PCB design, EasyEDA mig
   </tr>
 </table>
 
+<p align="center">
+  <img src="assets/examples/assembled-board-example.jpg" alt="使用这套 skill 与知识库完成的电路板实物案例" width="480"><br>
+  实物案例：同样使用这套 skill 与知识库完成。
+</p>
+
 ## 从哪里开始
 
 - 给 AI 的入口：[SKILL.md](SKILL.md)
