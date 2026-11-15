@@ -1,4 +1,4 @@
 interface:
-  display_name: "KiCad 到嘉立创 PCB 设计"
-  short_description: "原理图、人工布线、嘉立创迁移与双面贴装交付的核验流程"
-  default_prompt: "使用 $kicad-easyeda-pcb 完成当前电路板设计、嘉立创原生调整和制造资料核验，并沿用已经确认的约束。"
+  display_name: "KiCad 与嘉立创 PCB 工作流"
+  short_description: "按阶段设计、逐网布线、跨软件迁移，核对实际铜形与制造装配资料"
+  default_prompt: "使用 $kicad-easyeda-pcb，先核对当前工程阶段和已确认约束，再完成本次设计、审查或迁移任务，并提供对应证据。"

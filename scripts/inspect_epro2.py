@@ -1,10 +1,13 @@
-"""Read-only inventory of EasyEDA .epro2 exports; no correctness sign-off.
+# SPDX-License-Identifier: MIT
+"""Read-only inventory of EasyEDA Pro .epro2 exports; no correctness sign-off.
 
 Observed format: one .epru ZIP member with JSON-header || JSON-payload | lines.
 Only explicit deletion tombstones and later revisions of the same type/id are
 resolved. Payloads are not simplified, rounded, or stripped of 3D properties.
 Account metadata in DOCHEAD is deliberately omitted from the report.
 Displayed local paths are reduced to basenames; raw payload hashes are preserved.
+Reports still contain source names, document/record IDs and component data.
+Keep reports inside the project; review them before public distribution.
 """
 
 from __future__ import annotations
@@ -12,6 +15,7 @@ from __future__ import annotations
 import argparse
 from collections import Counter, defaultdict
 import hashlib
+import io
 import json
 from pathlib import Path, PurePosixPath, PureWindowsPath
 import re
@@ -60,6 +64,10 @@ def public_report(value):
 class PrivateArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         self.exit(2, "Inspection failed: invalid arguments; use --help.\n")
+
+
+class OutputConflictError(ValueError):
+    """Output aliases a protected input; report only a fixed safe message."""
 
 
 def canonical(value):
@@ -153,7 +161,8 @@ def inventory_document(document, thickness_unit):
             properties = {**value.get("attrs", {}), **attrs.get(header.get("id"), {})}
             components.append({
                 "id": header.get("id"), "ref": properties.get("Designator"),
-                "footprint": properties.get("FootprintName", properties.get("Footprint")),
+                "footprint": properties.get("Footprint") or properties.get("FootprintName"),
+                "footprint_name": properties.get("FootprintName"),
                 "lcsc": properties.get("LCSC"), "mpn": properties.get("MPN"),
                 "layer_id": value.get("layerId"), "x_raw": value.get("x"),
                 "y_raw": value.get("y"), "angle_deg": value.get("angle"),
@@ -181,7 +190,10 @@ def inventory_document(document, thickness_unit):
 
 
 def inspect(path, thickness_unit="unknown"):
-    with zipfile.ZipFile(path) as archive:
+    if thickness_unit not in ("unknown", "mil", "mm"):
+        raise ValueError("Thickness unit must be unknown, mil or mm")
+    source_bytes = path.read_bytes()
+    with zipfile.ZipFile(io.BytesIO(source_bytes)) as archive:
         members = [item for item in archive.infolist() if item.filename.lower().endswith(".epru")]
         if len(members) != 1:
             raise ValueError(f"Expected one .epru member, found {len(members)}")
@@ -190,7 +202,7 @@ def inspect(path, thickness_unit="unknown"):
         text = archive.read(members[0]).decode("utf-8-sig")
     return public_report({
         "schema": SCHEMA, "status": "INVENTORY_ONLY_NOT_ELECTRICAL_OR_MANUFACTURING_SIGNOFF",
-        "source_name": path.name, "source_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "source_name": path.name, "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
         "documents": [inventory_document(document, thickness_unit) for document in parse_native(text)],
         "scope": "Exact active payload inventory. Record ticket/header metadata are excluded; geometry, model attributes and polygon vertices are not normalized. No pin-net equivalence, fill validity, DRC, model alignment or SMT placement is established.",
         "privacy": "Local absolute paths in displayed strings are reduced to basenames or redaction markers. Payload hashes use the original data. Project identifiers and part numbers remain; review before sharing.",
@@ -217,6 +229,9 @@ def compare(before, after):
 
 
 def main():
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(encoding="utf-8")
     parser = PrivateArgumentParser(prog="inspect_epro2.py", description=__doc__)
     parser.add_argument("source", type=Path)
     parser.add_argument("--output", type=Path, help="JSON report path; default writes JSON to stdout")
@@ -224,8 +239,12 @@ def main():
     parser.add_argument("--thickness-unit", choices=("unknown", "mil", "mm"), default="unknown")
     args = parser.parse_args()
     try:
-        if args.output and args.output.resolve() in {args.source.resolve(), args.baseline.resolve() if args.baseline else None}:
-            raise ValueError("Output must not overwrite source or baseline")
+        if args.output:
+            for protected in (args.source, args.baseline):
+                if protected and (args.output.resolve() == protected.resolve()
+                                  or (args.output.exists() and protected.exists()
+                                      and args.output.samefile(protected))):
+                    raise OutputConflictError("Output must not overwrite source or baseline")
         report = inspect(args.source, args.thickness_unit)
         if args.baseline:
             report["comparison"] = compare(json.loads(args.baseline.read_text(encoding="utf-8-sig")), report)
@@ -237,6 +256,9 @@ def main():
         else:
             print(rendered, end="")
         return 0
+    except OutputConflictError:
+        print("Inspection failed: output must not overwrite source or baseline.", file=sys.stderr)
+        return 2
     except OSError as error:
         print(f"Inspection failed: file operation failed ({type(error).__name__}, errno={error.errno}).", file=sys.stderr)
         return 2

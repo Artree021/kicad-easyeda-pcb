@@ -8,13 +8,29 @@
 
 English: A reusable agent skill for evidence-based KiCad PCB design, EasyEDA migration review and manufacturing handoff. Includes a read-only Python inspector for `.epro2` exports.
 
+## 项目案例
+
+我们使用当前 skill 与知识库，结合人工复核与修改完成的主控板（正反面 3D 预览）。
+
+<table>
+  <tr>
+    <td width="50%" align="center"><img src="assets/examples/mainboard-front.png" alt="主控板正面 3D 预览" width="600"><br>正面</td>
+    <td width="50%" align="center"><img src="assets/examples/mainboard-back.png" alt="主控板背面 3D 预览" width="600"><br>背面</td>
+  </tr>
+</table>
+
 ## 从哪里开始
 
 - 给 AI 的入口：[SKILL.md](SKILL.md)
-- 设计与逐网布线：[design-and-review.md](references/design-and-review.md)
-- 嘉立创EDA原生工程与迁移：[easyeda-native.md](references/easyeda-native.md)
-- 制造与双面贴装交付：[manufacturing-handoff.md](references/manufacturing-handoff.md)
-- 环境、依赖与检查证据：[local-environment-and-evidence.md](references/local-environment-and-evidence.md)
+- 需求与规则：[规则和来源](references/rules-and-sources.md)
+- 原理图与布局：[设计与布局](references/design-and-layout.md)
+- 逐网布线与实际铜形：[布线与铜](references/routing-and-copper.md)
+- 嘉立创EDA原生工程与迁移：[迁移与原生编辑](references/migration-and-native.md)
+- 制造与双面贴装交付：[制造与装配](references/manufacturing-and-assembly.md)
+- 人工接管、交接和复盘：[协作与证据](references/collaboration-and-evidence.md)、[工具排障](references/tool-troubleshooting.md)
+- 可复制到工程填写的检查表：[templates/](templates/)
+
+当前版本 **2.0.0** 合并了原技能、13 篇知识库和七个历史窗口的项目经验，按阶段读取，避免每次加载整库。
 
 ## 能帮你做什么
 
@@ -39,6 +55,7 @@ English: A reusable agent skill for evidence-based KiCad PCB design, EasyEDA mig
 ├── SKILL.md
 ├── agents/openai.yaml
 ├── references/
+├── templates/
 └── scripts/inspect_epro2.py
 ```
 
@@ -92,7 +109,7 @@ git clone https://github.com/Artree021/kicad-easyeda-pcb.git "$env:USERPROFILE/.
 | 嘉立创EDA原生自动化 | 嘉立创EDA专业版，以及当前环境可用的扩展/API 通道或兼容桥接工具 |
 | 包内离线检查脚本 | Python 3.10+，仅使用标准库，无需 pip 安装依赖 |
 
-本仓库不打包 EDA 软件、第三方 SDK、`easyeda-api` 桥接代码、私人设计工程、制造资料、账号数据或实验室标志。第三方工具需从各自来源安装并遵守其许可。没有原生接口时，可先完成离线审查并明确哪些步骤仍需在编辑器中确认。
+本仓库不打包 EDA 软件、第三方 SDK、`easyeda-api` 桥接代码、私人设计工程、制造资料或账号数据。案例图片由作者提供并授权展示。第三方工具需从各自来源安装并遵守其许可。没有原生接口时，可先完成离线审查并明确哪些步骤仍需在编辑器中确认。
 
 ## 离线检查 `.epro2`
 
@@ -113,10 +130,10 @@ python scripts/inspect_epro2.py board.epro2 --baseline work/inventory.json --out
 ## 验证
 
 ```sh
-python -B tests/test_inspect_epro2.py
+python -B tests/test_inspect_epro2.py --work-dir work/helper-tests
 ```
 
-测试使用临时目录中的合成导出样例，覆盖记录修订与删除、单位转换、路径脱敏、基线比较、输入覆盖保护、错误输入和文档链接。它验证离线助手的行为，不代表所有 EDA 版本或实际板卡均已验收。
+测试使用指定工作目录中的合成导出样例，覆盖记录修订与删除、单位转换、路径脱敏、基线比较、输入覆盖保护和错误输入。它验证离线助手的行为，不代表所有 EDA 版本或实际板卡均已验收。详见 [验证记录](VALIDATION.md)。
 
 ## 反馈和贡献
 

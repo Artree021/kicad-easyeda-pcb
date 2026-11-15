@@ -1,7 +1,13 @@
 __pycache__/
 *.py[cod]
-.venv/
-.env
-work/
 .DS_Store
 Thumbs.db
+.env
+.env.*
+work/
+private/
+*.epro2
+*.epru
+*.kicad_pcb
+*.kicad_sch
+*.log
